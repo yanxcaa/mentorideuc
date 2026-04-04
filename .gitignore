@@ -33,7 +33,9 @@ yarn-error.*
 .local
 
 .idea
+.idea/
 .vscode
+.vscode/
 
 # typescript
 *.tsbuildinfo
