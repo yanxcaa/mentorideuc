@@ -236,7 +236,7 @@ export default function TutorDashboard() {
                                 </View>
                                 <View className="flex mt-5 flex-row gap-5">
                                     <TouchableOpacity
-                                        className="rounded-xl p-3 grow bg-white border border-solid border-green-600"
+                                        className="rounded-xl p-3 grow bg-white border border-solid border-green-500"
                                         onPress={() => handlePending(item.id, false)}
                                     >
                                         <Text className="text-green-600 font-semibold text-center text-base">Cancelar</Text>
