@@ -35,6 +35,8 @@ export default function Home() {
         return <Loading />
     }
 
+    // Checking the feature/admin-module
+
     return (
         <View className="flex-1 bg-white pt-12">
             <DashboardHeader
