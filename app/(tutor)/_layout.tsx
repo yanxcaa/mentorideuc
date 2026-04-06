@@ -5,7 +5,9 @@ export default function TutorLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="tabs" />
             <Stack.Screen name="index" />
-            <Stack.Screen name="sessions" />
+            <Stack.Screen name="CalendarScreen" />
+            <Stack.Screen name="PendingSessions" />
+            <Stack.Screen name="Profile" />
         </Stack>
     );
 }

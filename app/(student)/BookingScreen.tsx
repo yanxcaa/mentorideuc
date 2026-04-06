@@ -4,6 +4,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { bookEvent, getTutorAvailability } from "@/lib/api/caledar";
 import { useCurrentUser } from "@/lib/hooks";
 import { supabase } from "@/lib/supabase";
+import Loading from "@/src/components/Loading";
 
 export default function BookingScreen() {
     const [loading, setLoading] = useState(false);
@@ -52,6 +53,7 @@ export default function BookingScreen() {
         }
     }
 
+
     async function handleBook(eventId: string) {
         try {
             setLoading(true);
@@ -69,11 +71,11 @@ export default function BookingScreen() {
             const newDescription = description.trim();
 
             await bookEvent(eventId, profile.id, newTitle, newDescription);
-            Alert.alert("Éxito", "La sesión ha sido guardada");
+            Alert.alert("Éxito", "La sesion se ha mandado al tutor");
 
-            // Reset form
             setTitle("");
             setDescription("");
+            setSelectedTutor("");
             setAvailability([]);
         } catch (error: any) {
             Alert.alert("Error", error.message);
@@ -83,30 +85,32 @@ export default function BookingScreen() {
     }
 
     if (loading || profileLoading) return (
-        <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text className="mt-2 text-gray-500">Cargando...</Text>
-        </View>
+        <Loading />
     );
 
     return (
-        <View className="flex-1 p-5">
-            <Text className="text-lg font-semibold mb-5">Nueva solicitud de tutoría</Text>
+        <View className="flex-1 bg-white pt-20 px-5">
+            <Text className="text-2xl text-center font-semibold text-gray-900 mb-5">Nueva solicitud de tutoría</Text>
 
             <View className="flex mb-5 flex-col gap-4">
                 <View>
-                    <Text className="text-gray-700 mb-2 font-medium">Titulo de la sesión</Text>
+                    <Text className="text-lg font-bold text-gray-900 mb-3">Titulo de la sesión</Text>
                     <TextInput
-                        className="border border-solid border-gray-300 rounded p-3 bg-white"
+                        className="border border-solid border-gray-300 rounded-xl bg-white py-3.5 px-3"
                         placeholder="Título de la sesión"
                         placeholderTextColor="#9ca3af"
                         value={title}
                         onChangeText={setTitle}
+                        style={{
+                            fontSize:16,
+                            lineHeight: 20,
+                            textAlignVertical: 'center',
+                        }}
                     />
                 </View>
 
                 <View>
-                    <Text className="text-gray-700 mb-2 font-medium">Seleccionar tutor:</Text>
+                    <Text className="text-lg font-bold text-gray-900 mb-3">Seleccionar tutor:</Text>
                     <Dropdown
                         data={tutors.map(tutor => ({
                             label: tutor.name,
@@ -121,9 +125,9 @@ export default function BookingScreen() {
                             backgroundColor: 'white',
                             borderWidth: 1,
                             borderColor: '#d1d5db',
-                            borderRadius: 8,
+                            borderRadius: 12,
                             paddingHorizontal: 12,
-                            paddingVertical: 8,
+                            paddingVertical: 12,
                         }}
                         placeholderStyle={{
                             color: '#9ca3af',
@@ -143,9 +147,9 @@ export default function BookingScreen() {
                 </View>
 
                 <View>
-                    <Text className="text-gray-700 mb-2 font-medium">Descripción</Text>
+                    <Text className="text-lg font-bold text-gray-900 mb-3">Descripción</Text>
                     <TextInput
-                        className="border border-solid border-gray-300 h-full min-h-36 max-h-36 rounded p-3 bg-white"
+                        className="border border-solid border-gray-300 h-full text-lg min-h-36 max-h-36 rounded-xl p-3 bg-white"
                         placeholder="Descripción (opcional)"
                         placeholderTextColor="#9ca3af"
                         value={description}
@@ -159,7 +163,7 @@ export default function BookingScreen() {
 
             {availability.length > 0 && (
                 <View className="flex-1">
-                    <Text className="text-lg font-semibold mb-3">Horarios disponibles:</Text>
+                    <Text className="text-xl font-bold text-gray-900 mb-3">Horarios disponibles:</Text>
                     <FlatList
                         data={availability}
                         keyExtractor={(item) => item.id}
@@ -182,16 +186,12 @@ export default function BookingScreen() {
                                 </View>
                                 <View className="flex flex-row gap-5">
                                     <TouchableOpacity
-                                        className="rounded p-3 grow bg-white border border-solid border-blue-500"
-                                        disabled={true}
-                                    >
-                                        <Text className="text-blue-500 font-semibold text-center text-base">Cancelar</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        className="rounded p-3 grow bg-blue-500"
+                                        className="rounded-xl p-3 grow bg-blue-500"
                                         onPress={() => handleBook(item.id)}
                                     >
-                                        <Text className="text-white text-center font-semibold text-base">Reservar</Text>
+                                        {loading ? (
+                                            <Text className="text-white text-center font-semibold text-base">...</Text>
+                                        ) : (<Text className="text-white text-center font-semibold text-base">Reservar</Text>)}
                                     </TouchableOpacity>
                                 </View>
                             </View>

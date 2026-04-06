@@ -18,7 +18,7 @@ export default function Account({ session }: { session: Session }) {
     async function getProfile() {
         try {
             setLoading(true)
-            if (!session?.user) throw new Error('No user on the session!')
+            if (!session?.user) throw new Error('Sin usuario para la secion!')
 
             const { data, error, status } = await supabase
                 .from('profiles')
@@ -67,8 +67,6 @@ export default function Account({ session }: { session: Session }) {
                 avatar_url,
                 updated_at: new Date(),
             }
-
-            console.log(updates);
 
             const { data, error } = await supabase
                 .from('profiles')

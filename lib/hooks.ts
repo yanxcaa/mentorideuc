@@ -9,7 +9,6 @@ export function useSession() {
     const [error, setError] = useState<any>(null);
 
     useEffect(() => {
-        // Get current session
         supabase.auth.getSession().then(({ data: { session }, error }) => {
             if (error) {
                 console.error("Session error:", error);
@@ -25,7 +24,6 @@ export function useSession() {
             setLoading(false);
         });
 
-        // Listen for auth changes
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {

@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
-import { View, Text, FlatList, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import {View, Text, FlatList, ActivityIndicator, Alert, TouchableOpacity, RefreshControl} from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from "@/lib/supabase";
 import {useCurrentUser} from "@/lib/hooks";
-import {EventStatus} from "@/src/types/auth";
+import {formatDateTime} from "@/src/utils/date";
+import SearchFilter from "@/src/components/Search";
+import Entypo from "@expo/vector-icons/Entypo";
+import SessionCard from "@/src/components/SessionCard";
+import {cancelEvent} from "@/lib/api/caledar";
+import Loading from "@/src/components/Loading";
 
 export default function SessionsListScreen() {
     const { profile } = useCurrentUser();
     const [repositories, setRepositories] = useState<any[]>([]);
+    const [filteredRepositories, setFilteredRepositories] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         if (profile?.id) {
@@ -17,120 +24,140 @@ export default function SessionsListScreen() {
         }
     }, [profile?.id]);
 
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadRepositories();
+    };
+
     async function loadRepositories() {
         try {
             setLoading(true);
 
-            const { data, error } = await supabase
-                .from("repository")
+            const { data: events, error: eventsError } = await supabase
+                .from("calendar_events")
                 .select(`
-                          id,
-                          title,
-                          description,
-                          status,  
-                          student:profiles!repository_student_id_fkey(name),
-                          tutor:profiles!repository_tutor_id_fkey(name),
-                          calendar:calendar_events!repository_booking_id_fkey(start_time, end_time, status)
-                        `)
+                    id,
+                    title,
+                    description,
+                    status,  
+                    start_time,
+                    end_time,
+                    student:profiles!calendar_events_student_id_fkey(name)
+                `)
                 .eq("student_id", profile?.id as string)
                 .order("created_at", { ascending: false });
 
-                if (error) console.error(error);
-                setRepositories(data || [])
+            if (eventsError) throw eventsError;
+
+            const eventIds = events.map(event => event.id);
+            const { data: repositories, error: reposError } = await supabase
+                .from("repository")
+                .select("id, status, booking_id")
+                .in("booking_id", eventIds);
+
+            if (reposError) throw reposError;
+
+            const eventsWithRepos = events.map(event => ({
+                ...event,
+                repository: repositories?.find(repo => repo.booking_id === event.id) || []
+            }));
+
+            setRepositories(eventsWithRepos || []);
         } catch (error: any) {
             Alert.alert("Error", error.message);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }
+
+    async function handleDeleteSession(eventId: string, profile: string) {
+        try {
+            setLoading(true);
+            console.log(eventId, profile);
+            await cancelEvent(eventId, profile);
+            Alert.alert("Sesion eliminada");
+            loadRepositories();
+        } catch (error: any) {
+            console.log(error);
         } finally {
             setLoading(false);
         }
     }
 
-    function navigateToRepository(repositoryId: string) {
-        router.push(`/(student)/sessions/${repositoryId}`);
-    }
+    const handleCardPress = (item: any) => {
+        if (item.status === 'booked' && item.repository?.id) {
+            router.push(`/(student)/sessions/${item.repository.id}`);
+        } else {
+            Alert.alert("Información", `Esta sesión está ${item.status}`);
+        }
+    };
 
-    function formatTimeRange(startTime:string, endTime:string) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-
-        const formatTime = (date:any) => {
-            return date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-        };
-
-        return `${formatTime(start)} - ${formatTime(end)}`;
-    }
-
-    if (loading) {
-        return (
-            <View className="flex-1 justify-center items-center">
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text className="mt-2 text-gray-500">Loading sessions...</Text>
-            </View>
+    const handleLongPress = (item: any) => {
+        Alert.alert(
+            "Opciones de Sesión",
+            `¿Qué quieres hacer con "${item.title}"?`,
+            [
+                { text: "Salir", style: "cancel" },
+                { text: "Ver Detalles", onPress: () => {
+                        if (item.status === 'booked' && item.repository?.id) {
+                            handleCardPress(item);
+                        }
+                }}
+            ]
         );
     }
 
-    return (
-        <View className="flex-1 p-5">
-            <Text className="text-lg font-bold w-full text-center mb-4">Mis Tutorias</Text>
+    if (loading && !refreshing) {
+        return <Loading />
+    }
 
-            <FlatList
+    return (
+        <View className="flex-1 pt-20 pb-5 bg-white px-5">
+            <Text className="text-2xl text-center font-semibold text-gray-900 mb-5">Mis Tutorias</Text>
+            <SearchFilter
                 data={repositories}
+                onFilteredDataChange={setFilteredRepositories}
+                searchFields={["title", "description", "student.name"]}
+                filterConfig={{
+                    repositoryStatus: true,
+                    sessionStatus: true
+                }}
+                placeholder="Buscar sesiones..."
+                emptyMessage="No se encontraron sesiones"
+            />
+            <FlatList
+                contentContainerStyle={{
+                    flexGrow: 1,
+                }}
+                data={filteredRepositories}
                 keyExtractor={(item) => item.id}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#10B981']}
+                        tintColor={'#10B981'}
+                    />
+                }
                 renderItem={({ item }) => (
-                    <TouchableOpacity
-                        className="bg-white p-4 rounded-lg mb-3 border border-gray-200"
-                        onPress={() => navigateToRepository(item.id)}
-                        onLongPress={() => {}}
-                        delayLongPress={500}
-                    >
-                        <Text className="font-semibold text-2xl">
-                            {item?.title || "Session"}
-                        </Text>
-                        <Text className="text-gray-500 text-sm">
-                            Tutor: {`Ing. ${item?.tutor?.name}` || "Unknown"}
-                        </Text>
-                        <Text className="text-gray-500 text-sm mt-2 mb-5">
-                            {item?.description || "No descripcion"}
-                        </Text>
-                        <View className="flex flex-row gap-3 items-center">
-                            <View className="flex flex-row items-center gap-2 ">
-                                <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-                                <Text className="text-gray-600">
-                                    {item?.calendar?.start_time ?
-                                        new Date(item?.calendar?.start_time).toLocaleString().split(', ')[0] :
-                                        "No date"
-                                    }
-                                </Text>
-                            </View>
-                            <View className="flex flex-row items-center gap-2 ">
-                                <Ionicons name="time-outline" size={16} color="#6B7280" />
-                                <Text className="text-gray-600">
-                                    {(item?.calendar?.start_time && item?.calendar?.end_time) ?
-                                        formatTimeRange(item?.calendar?.start_time, item?.calendar?.end_time) :
-                                        "No date"
-                                    }
-                                </Text>
-                            </View>
-                        </View>
-                        <Text className={`text-sm mt-1 ${
-                            item.status === 'submitted' ? 'text-blue-600' :
-                                item.status === 'reviewed' ? 'text-yellow-600' :
-                                    item.status === 'approved' ? 'text-green-600' :
-                                        'text-red-600'
-                        }`}>
-                            Status: {item.status}
-                        </Text>
-                    </TouchableOpacity>
+                    <SessionCard
+                        item={item}
+                        onPress={handleCardPress}
+                        onLongPress={handleLongPress}
+                        currentUserId={profile?.id}
+                        showStudentInfo={true}
+                        variant="default"
+                    />
                 )}
                 ListEmptyComponent={
-                    <View className="flex items-center justify-center py-10">
-                        <Text className="text-gray-500">No sessions found</Text>
+                    <View className="flex-1 items-center justify-center py-10 px-6">
+                        <Entypo name="emoji-sad" size={38} color="#9CA3AF" />
+                        <Text className="mt-3 text-gray-500">No se encontraron tutorias</Text>
                     </View>
                 }
             />
+            <View style={{paddingBottom: 75}}></View>
         </View>
     );
 }

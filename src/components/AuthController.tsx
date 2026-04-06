@@ -2,13 +2,13 @@ import React, {useEffect} from 'react';
 import {View, ActivityIndicator, Text, Alert} from 'react-native';
 import {useSession,  useProfile} from "@/lib/hooks";
 
-/* Screens */
 import Account from '@/app/Account';
 import LoginScreen from "@/app/(auth)/Login";
 import AdminTabs from "@/app/(admin)/tabs";
 import TutorTabs from "@/app/(tutor)/tabs";
 import StudentTabs from "@/app/(student)/tabs";
 import {supabase} from "@/lib/supabase";
+import Loading from "@/src/components/Loading";
 
 export default function AuthController() {
     const { session, loading: sessionLoading, error: sessionError } = useSession();
@@ -28,12 +28,7 @@ export default function AuthController() {
     const loading = sessionLoading || (session && profileLoading);
 
     if (loading) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" />
-                <Text className="mt-4 text-gray-600">Loading...</Text>
-            </View>
-        );
+        return <Loading />;
     }
 
     if (profileError) {
@@ -48,11 +43,9 @@ export default function AuthController() {
         return <LoginScreen />;
     }
 
-    // Show different dashboards according to the Role
     if (profile?.role === 'admin') return <AdminTabs />;
     if (profile?.role === 'tutor') return <TutorTabs />;
     if (profile?.role === 'student') return <StudentTabs />;
 
-    // If Role missing, show account edit screen to set role/name first
     return <Account session={session} />;
 }
