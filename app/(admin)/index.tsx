@@ -9,6 +9,8 @@ import SimpleAdminDashboard from "@/src/components/DataAnalysisAdmin";
 import VisualAdminDashboard from "@/src/components/DataAnalysisAdmin";
 import UserCard from "@/src/components/UserCardAdmin";
 
+
+// Home updated
 export default function Home() {
     const { profile } = useCurrentUser();
     const [users, setUsers] = useState<any[]>([]);
@@ -16,8 +18,9 @@ export default function Home() {
 
 
     const loadUsers = async () => {
+        setLoading(true);
+
         try {
-            setLoading(true);
             const usersData = await getUsers();
             setUsers(usersData);
         } catch (error: any) {
@@ -31,9 +34,7 @@ export default function Home() {
         loadUsers();
     }, []);
 
-    if (loading) {
-        return <Loading />
-    }
+    if (loading) return <Loading />
 
     // Checking the feature/admin-module
 
