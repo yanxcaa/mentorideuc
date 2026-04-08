@@ -18,6 +18,8 @@ interface InfoCard {
     icon: string;
 }
 
+// New debug for student index
+
 export default function StudentDashboard() {
     const { profile } = useCurrentUser();
     const [loading, setLoading] = useState(true);
